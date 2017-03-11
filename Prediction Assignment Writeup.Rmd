@@ -1,0 +1,72 @@
+---
+title: "Prediction Assignment Writeup"
+author: "Zilin Chen"
+date: "2017/3/11"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Discription
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement ¨C a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. And the goal of this project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. 
+
+## Data
+
+The training data for this project are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+The data for this project come from this source: http://groupware.les.inf.puc-rio.br/har. If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment.
+
+## Loading and Cleaning Data
+Download the csv file into the working directory. Tidy data through removing all of the columns contains no data( which can be "#DIV/0!", "", "NA"). Delete the first 7 columns, because they are not related to our prediction. Set the seed to be 666 in order to ensure the reproducibility.
+```{r load}
+set.seed(666)
+training <- read.csv("pml-training.csv", na.strings=c("#DIV/0!", "", "NA"))
+testing <- read.csv("pml-testing.csv", na.strings=c("#DIV/0!", "", "NA"))
+trainingset<-training[,colSums(is.na(training)) == 0]
+testingset <-testing[,colSums(is.na(testing)) == 0]
+trainingset   <-trainingset[,-c(1:7)]
+testingset <-testingset[,-c(1:7)]
+```
+
+## Train Data
+Library necessary packages for trainning and predicting. And subset 25% of data for ccross validation.
+```{r pressure, message = FALSE}
+library(caret)
+library(rpart)
+library(randomForest)
+index <- createDataPartition(y=trainingset$classe, p=0.75, list=FALSE)
+sub_Training <- trainingset[index, ] 
+sub_Testing <- trainingset[-index, ]
+```
+
+## Decision Tree
+First, use decision tree to train the data.
+```{r}
+model1 <- rpart(classe ~ ., data=sub_Training, method="class")
+prediction1 <- predict(model1, sub_Testing, type = "class")
+confusionMatrix(prediction1, sub_Testing$classe)
+```
+
+As we can see, the accuracy is just 74.86% tested by subsetted testing set. A more accurate module is in need.
+
+## Random Forest
+Next, try the random forest.
+```{r}
+model2 <- randomForest(classe ~. , data=sub_Training, method="class")
+prediction2 <- predict(model2, sub_Testing, type = "class")
+confusionMatrix(prediction2, sub_Testing$classe)
+```
+
+As we can see, the accuracy is 99.73% tested by subsetted testing set. The module seems pretty good, and we will use it to predict the test set.
+
+## Predict
+```{r}
+predict(model2, testingset, type="class")
+```
